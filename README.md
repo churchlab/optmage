@@ -46,7 +46,11 @@ However, in reality, this doesn't seem to work perfectly. Specific issues:
 
 ## Running Tests
 
-From the top-level directory (one directory **above** the `tests/` directory), run (with the virtualenv enabled on the shell):
+With the correct python environment, run:
+
+    $ python setup.py test
+
+If the above isn't working, you can use `nose` directly for testing from the top-level directory (one directory **above** the `tests/` directory), by running (with the virtualenv enabled on the shell):
 
         (venv)$ nosetests
 
