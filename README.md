@@ -36,3 +36,16 @@ However, in reality, this doesn't seem to work perfectly. Specific issues:
 From the top-level directory (one directory **above** the `tests/` directory), run (with the virtualenv enabled on the shell):
 
         (venv)$ nosetests
+
+
+## Usage
+
+There is currently a single script that does all the work: `src/optmage/oligo_designer.py`.
+
+The user can list all the options available by running (remember to use the proper virtualenv):
+
+    (venv)$ python oligo_designer.py -h
+
+By default the script creates oligos based on the configuration in `src/optmage/data/INPUT_targets.txt`, relative to the reference genome `src/optmage/data/mg1655.fasta`. Users should specify different inpus using the above flags.
+
+NOTE: The script currently has defaults tuned to the canonical E. coli MG1655 strain so using a different strain may require some edits.
