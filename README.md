@@ -3,6 +3,19 @@ optmage
 
 Scripts for designing oligos and primers for MAGE (Multiplex Automated Genome Engineering)
 
+## Requirements
+
+The following are third-party software packages that must be installed on the system. Python requirements are described in the Installation section below.
+
+### Unafold (required for secondary structure calculation).
+
+1. Download and install from here
+   [http://dinamelt.rit.albany.edu/download.php](http://dinamelt.rit.albany.edu/download.php)
+
+* If using linux, you probably want to download the RPM and use these instructions:
+<https://overlappingminds.com/sh/thoughts/0aa6d79e-fb8b-4f84-b287-f8e4494eac49>
+
+
 ## Installation
 
 The setup.py config isn't ready yet, so please use the following installation procedure:
