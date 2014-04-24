@@ -17,7 +17,6 @@ setup(
     package_dir={'': 'src'},
     packages = ['optmage'],
     install_requires=[
-        'numpy >= 1.5.1',
         'biopython >= 1.6.1'
     ],
     test_suite = 'nose.collector',
