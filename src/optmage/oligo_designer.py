@@ -16,7 +16,6 @@ Ported to python in 2013 by:
     Gleb Kuznetsov (gleb@mit.edu)
 """
 
-from collections import namedtuple
 import csv
 import math
 import os
@@ -28,7 +27,7 @@ from Bio import SeqIO
 from Bio.Alphabet import generic_dna
 from Bio.Seq import Seq
 
-PWD = os.path.dirname(os.path.realpath(__file__ ))
+PWD = os.path.dirname(os.path.realpath(__file__))
 DATA = os.path.join(PWD, 'data')
 
 # I/O related constants/defaults.
@@ -117,6 +116,7 @@ STRAND_INPUT_INTERPRETATION_MAP = {
         -1: -1
 }
 
+
 class OligoTarget(object):
     """Object that specifies the properties of the Oligo to create.
     """
@@ -202,7 +202,7 @@ class OligoTarget(object):
             #     * http://www.annualreviews.org/doi/abs/10.1146/annurev.ge.26.120192.002311
             raise RuntimeError(
                     "Unable to determine replichore for (start, end) %s." %
-                        ((start,end),))
+                            ((start, end),))
 
 
     @classmethod
@@ -261,7 +261,7 @@ class OligoResult(object):
         self.ss_dG = ss_dG
         self.oligo_size = oligo_size
         self.oligo_seq = oligo_seq
-        self.original_seq= original_seq
+        self.original_seq = original_seq
         self.mutation_seq = mutation_seq
         self.predicted_replacement_efficiency = predicted_replacement_efficiency
 
