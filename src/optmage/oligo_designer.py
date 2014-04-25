@@ -54,54 +54,16 @@ DEFAULT_REPLICATION_TERMINUS = (1588774, 1588801)
 PHOSPHOROTHIOATE_SYMBOl = '*'
 
 
-class OptMAGEConfig(object):
-    """Object that stores configuration for a design run.
-    """
-
-    def __init__(self, args):
-        """Constructor."""
-        # The size of the oligo. This is typically 90.
-        self.oligo_size = args.oligo_size
-
-        # Minimum free energy that we want to allow an oligo to have in order
-        # to avoid strong secondary structure.
-        self.min_ss_dG = args.min_ss_dG
-
-        # The minimum number of base pairsa mutation and the end of
-        # an oligo. Previous experiments have shown that there is a sharp drop
-        # in replacement efficiency if the mutation gets within ~15 base pairs
-        # of the oligo.
-        self.oligo_end_buffer_distance = args.mut_loc_max
-
-        # The number of terminal 5' phosphorothioate bonds.
-        self.num_phosphorothioate_bonds = args.num_thio
-
-        # 0 = False, 1 = True
-        # If True, use the mutation position to automatically calculate
-        # replichore information. Otherwise, use the replichore value specified
-        # in the oligo target file.
-        self.should_calc_replichore = not args.manually_calc_replichore
-
-        # The genome.
-        self.set_genome_record_from_source(args.ref_genome)
-
-        # Replichore-related.
-        self.replication_origin = args.replication_origin
-        self.replication_terminus = args.replication_terminus
-
-
-    def set_genome_record_from_source(self, genome_source):
-        """Sets the genome record from source file path.
-        """
-        with open(genome_source) as genome_fh:
-            self.genome_record = SeqIO.read(genome_fh, 'fasta')
-
+OPT_MAGE_MUTATION_TYPE__REFERENCE = 'R'
+OPT_MAGE_MUTATION_TYPE__SUBSTITUTION = 'M'
+OPT_MAGE_MUTATION_TYPE__DELETION = 'D'
+OPT_MAGE_MUTATION_TYPE__INSERTION = 'I'
 
 VALID_MUTATION_TYPES = set([
-    'R', # original sequence in the reference genome
-    'M', # mutation
-    'D', # deletion
-    'I' # insertion
+    OPT_MAGE_MUTATION_TYPE__REFERENCE,
+    OPT_MAGE_MUTATION_TYPE__SUBSTITUTION,
+    OPT_MAGE_MUTATION_TYPE__DELETION,
+    OPT_MAGE_MUTATION_TYPE__INSERTION
 ])
 
 # Map from acceptable values for the strand parameter to the representation
@@ -117,11 +79,82 @@ STRAND_INPUT_INTERPRETATION_MAP = {
 }
 
 
+OLIGO_TARGET_REQUIRED_PARAMS = set([
+    'target_id',
+    'strand',
+    'start',
+    'end',
+    'mutation_type',
+])
+
+
+class OptMAGEConfig(object):
+    """Object that stores configuration for a design run.
+    """
+
+    def __init__(self,
+            oligo_size=DEFAULT_OLIGO_SIZE,
+            min_ss_dG=DEFAULT_MIN_SS_DG,
+            oligo_end_buffer_distance=DEFAULT_MUT_LOC_MAX,
+            num_phosphorothioate_bonds=DEFAULT_NUM_PHOSPHOROTHIOATE,
+            auto_calc_replichore=True,
+            ref_genome_source_location=DEFAULT_GENOME,
+            replication_origin=DEFAULT_REPLICATION_ORIGIN,
+            replication_terminus=DEFAULT_REPLICATION_TERMINUS):
+        """Constructor."""
+        # The size of the oligo. This is typically 90.
+        self.oligo_size = oligo_size
+
+        # Minimum free energy that we want to allow an oligo to have in order
+        # to avoid strong secondary structure.
+        self.min_ss_dG = min_ss_dG
+
+        # The minimum number of base pairsa mutation and the end of
+        # an oligo. Previous experiments have shown that there is a sharp drop
+        # in replacement efficiency if the mutation gets within ~15 base pairs
+        # of the oligo.
+        self.oligo_end_buffer_distance = oligo_end_buffer_distance
+
+        # The number of terminal 5' phosphorothioate bonds.
+        self.num_phosphorothioate_bonds = num_phosphorothioate_bonds
+
+        # 0 = False, 1 = True
+        # If True, use the mutation position to automatically calculate
+        # replichore information. Otherwise, use the replichore value specified
+        # in the oligo target file.
+        self.should_calc_replichore = auto_calc_replichore
+
+        # The genome.
+        self.set_genome_record_from_source(ref_genome_source_location)
+
+        # Replichore-related.
+        self.replication_origin = replication_origin
+        self.replication_terminus = replication_terminus
+
+    @classmethod
+    def build_from_args(cls, args):
+        """Factory method for creating a config object from parsed args.
+        """
+        return cls(
+            oligo_size=args.oligo_size,
+            min_ss_dG=args.min_ss_dG,
+            oligo_end_buffer_distance=args.mut_loc_max,
+            num_phosphorothioate_bonds=args.num_thio,
+            auto_calc_replichore=(not args.manually_calc_replichore),
+            ref_genome_source_location=args.ref_genome,
+            replication_origin=args.replication_origin,
+            replication_terminus=args.replication_terminus)
+
+    def set_genome_record_from_source(self, genome_source):
+        """Sets the genome record from source file path.
+        """
+        with open(genome_source) as genome_fh:
+            self.genome_record = SeqIO.read(genome_fh, 'fasta')
+
+
 class OligoTarget(object):
     """Object that specifies the properties of the Oligo to create.
     """
-    # The minimum number of arguments expected.
-    MIN_EXPECTED_ARGS = 6
 
     def __init__(self, optMAGE_config, params):
         """Constructor.
@@ -134,11 +167,13 @@ class OligoTarget(object):
                 * start
                 * end
                 * mutation_type
+                * replichore (optional)
                 * mutation_seq (optional)
 
         Returns:
             An OligoTarget object instance.
         """
+        assert not OLIGO_TARGET_REQUIRED_PARAMS - set(params.keys())
         self.target_id = params['target_id']
 
         self.strand = STRAND_INPUT_INTERPRETATION_MAP[params['strand']]
@@ -149,7 +184,7 @@ class OligoTarget(object):
 
         self.end = int(params['end'])
         assert self.end <= len(optMAGE_config.genome_record)
-        assert self.end >= self.start, "Bad input. End is greater than start."
+        assert self.end >= self.start, "Bad input. End is less than start."
 
         self.mutation_type = params['mutation_type']
         assert self.mutation_type in VALID_MUTATION_TYPES, (
@@ -162,12 +197,12 @@ class OligoTarget(object):
         # reference genome", then we just take that slice from directly
         # from the reference genome. Otherwise we get it from the provided
         # argument.
-        if self.mutation_type == 'R':
+        if self.mutation_type == OPT_MAGE_MUTATION_TYPE__REFERENCE:
             self.mutation_seq = optMAGE_config.genome_record.seq[
                     self.start:self.end]
             if self.strand == -1:
                 self.mutation_seq = self.mutation_seq.reverse_complement()
-        elif self.mutation_type == 'D':
+        elif self.mutation_type == OPT_MAGE_MUTATION_TYPE__DELETION:
             self.mutation_seq = ''
         else:
             self.mutation_seq = Seq(params['mutation_seq'], generic_dna)
@@ -220,8 +255,8 @@ class OligoTarget(object):
                 if not len(arg_list) >= cls.MIN_EXPECTED_ARGS:
                     arg_list = current_line.split(',')
                     arg_list = [arg.strip() for arg in arg_list]
-                    if not len(arg_list) >= cls.MIN_EXPECTED_ARGS:
-                        raise AssertionError("Invalid oligo target input.")
+                    assert len(arg_list) >= len(OLIGO_TARGET_REQUIRED_PARAMS), (
+                        "Invalid oligo target input.")
 
                 # Create the params object from the arg_list.
                 params = {
@@ -531,15 +566,22 @@ class OligoWriter(object):
     ]
 
     @classmethod
-    def write_default(cls, oligo_result_list, oligo_output_filename):
+    def write_default(cls, oligo_result_list, oligo_output_file):
         """Write list of result oligos to file.
+
+        Args:
+            oligo_result_list: List of OligoResult objects.
+            oligo_output_file: Filename or filehandle.
         """
-        with open(oligo_output_filename, 'w') as csvfile:
-            writer = csv.DictWriter(csvfile,
-                    cls.DEFAULT_OUTPUT_OLIGO_FIELD_NAMES)
-            writer.writeheader()
-            for oligo_result in oligo_result_list:
-                writer.writerow(oligo_result.__dict__)
+        if isinstance(oligo_output_file, str):
+            csvfile = open(oligo_output_file, 'w')
+        else:
+            csvfile = oligo_output_file
+
+        writer = csv.DictWriter(csvfile, cls.DEFAULT_OUTPUT_OLIGO_FIELD_NAMES)
+        writer.writeheader()
+        for oligo_result in oligo_result_list:
+            writer.writerow(oligo_result.__dict__)
 
 
     IDT_OUTPUT_OLIGO_FIELD_NAMES = [
@@ -661,7 +703,7 @@ def main():
     args = parser.parse_args()
 
     # Configure this run from these inputs.
-    optMAGE_config = OptMAGEConfig(args)
+    optMAGE_config = OptMAGEConfig.build_from_args(args)
 
     # Parse the target input and create list of targets.
     oligo_target_list = OligoTarget.parse_input_and_create_list(

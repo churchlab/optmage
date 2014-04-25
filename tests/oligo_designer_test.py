@@ -2,9 +2,7 @@
 OptMAGE Unit Tests
 """
 
-from collections import namedtuple
 import os
-import subprocess
 import unittest
 
 from Bio import SeqIO
@@ -12,7 +10,6 @@ from Bio.Alphabet import generic_dna
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from optmage.oligo_designer import create_parser
 from optmage.oligo_designer import DEFAULT_GENOME
 from optmage.oligo_designer import DEFAULT_OLIGO_SIZE
 from optmage.oligo_designer import DEFAULT_MIN_SS_DG
@@ -25,7 +22,7 @@ from optmage.oligo_designer import OligoTarget
 from optmage.oligo_designer import OptMAGEConfig
 
 
-PWD = os.path.dirname(os.path.realpath(__file__ ))
+PWD = os.path.dirname(os.path.realpath(__file__))
 TEST_DATA = os.path.join(PWD, 'test_data')
 DEFAULT_REF_GENOME = os.path.join(TEST_DATA, 'mg1655.fasta')
 
@@ -57,7 +54,7 @@ class TestOptMAGE(unittest.TestCase):
         mock_args.ref_genome = DEFAULT_GENOME
         mock_args.replication_origin = DEFAULT_REPLICATION_ORIGIN
         mock_args.replication_terminus = DEFAULT_REPLICATION_TERMINUS
-        self.config = OptMAGEConfig(mock_args)
+        self.config = OptMAGEConfig.build_from_args(mock_args)
 
 
     def test_oligo_generator__from_reference__target_forward_strand(self):
@@ -166,7 +163,7 @@ class TestOptMAGE(unittest.TestCase):
                     'start': 104352,
                     'end': 104353,
                     'mutation_type': 'R'
-        })))
+                })))
 
         # Replichore = 1, strand = -1.
         self.assertEqual(-1, OLIGO_GENERATOR.determine_oligo_sense(
@@ -177,7 +174,7 @@ class TestOptMAGE(unittest.TestCase):
                     'start': 53597,
                     'end': 53598,
                     'mutation_type': 'R'
-        })))
+                })))
 
         # Replichore = 2, strand = +1.
         self.assertEqual(1, OLIGO_GENERATOR.determine_oligo_sense(
@@ -188,7 +185,7 @@ class TestOptMAGE(unittest.TestCase):
                     'start': 2794168,
                     'end': 2794169,
                     'mutation_type': 'R'
-        })))
+                })))
 
         # Replichore = 2, strand = -1.
         self.assertEqual(1, OLIGO_GENERATOR.determine_oligo_sense(
@@ -199,7 +196,7 @@ class TestOptMAGE(unittest.TestCase):
                     'start': 2635317,
                     'end': 2635318,
                     'mutation_type': 'R'
-        })))
+                })))
 
 
     def test_free_energy_optmization(self):
