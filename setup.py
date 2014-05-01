@@ -14,10 +14,11 @@ setup(
     maintainer='Gleb Kuznetsov',
     maintainer_email='gleb@mit.edu',
     url='http://arep.med.harvard.edu/optMAGE/',
+    packages=['optmage'],
     package_dir={'': 'src'},
-    packages = ['optmage'],
     install_requires=[
         'biopython >= 1.6.1'
     ],
-    test_suite = 'nose.collector',
+    include_package_data=True,
+    test_suite='nose.collector',
 )

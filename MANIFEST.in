@@ -1,0 +1,4 @@
+include *.md
+include src/optmage/data/*
+include tests/*.py
+include tests/test_data/*
