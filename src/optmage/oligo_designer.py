@@ -32,8 +32,8 @@ DATA = os.path.join(PWD, 'data')
 
 # I/O related constants/defaults.
 DEFAULT_GENOME = os.path.join(DATA, 'mg1655.fasta')
-DEFAULT_OLIGO_TARGET_FILENAME = os.path.join(DATA, 'INPUT_targets.txt')
-DEFAULT_OLIGO_RESULT_OUTPUT_FILENAME = os.path.join(DATA, 'OUT_oligos.txt')
+DEFAULT_OLIGO_TARGET_FILENAME = os.path.join(DATA, 'input_targets.csv')
+DEFAULT_OLIGO_RESULT_OUTPUT_FILENAME = os.path.join(DATA, 'out_oligos.csv')
 
 # Other defaults/constants.
 DEFAULT_OLIGO_SIZE = 90
@@ -155,6 +155,8 @@ class OptMAGEConfig(object):
 class OligoTarget(object):
     """Object that specifies the properties of the Oligo to create.
     """
+
+    MIN_EXPECTED_ARGS = 6
 
     def __init__(self, optMAGE_config, params):
         """Constructor.
