@@ -56,6 +56,78 @@ class TestOptMAGE(unittest.TestCase):
         mock_args.replication_terminus = DEFAULT_REPLICATION_TERMINUS
         self.config = OptMAGEConfig.build_from_args(mock_args)
 
+    def test_oligo_generator__get_candidate_block_seq(self):
+        """Tests the part of the mage generator that determines the candidate
+        block seq.
+        """
+        OLIGO_SIZE = 90
+        self.config.oligo_size = OLIGO_SIZE
+
+        OLIGO_END_BUFFER_DISTANCE = 20
+        self.config.oligo_end_buffer_distance = OLIGO_END_BUFFER_DISTANCE
+
+        # Set this arbitrarily low so we pretty much guarantee we get the
+        # oligo sequence centered around the mutation.
+        self.config.min_ss_dG = -200
+
+        # Ignore phosphorothioates for now.
+        self.config.num_phosphorothioate_bonds = 0
+
+        oligo_generator = OligoGenerator(self.config)
+
+        # Replichore 1 and negative strand means the anti-sense strand will
+        # be targeted, so the oligo will have a positive sense.
+        REF = 'C'
+        params = {
+            'target_id': 'test',
+            'replichore': 'NA',
+            'strand': '+1',
+            'start': 2216229,
+            'end': 2216230,
+            'mutation_type': 'R'
+        }
+        oligo_target = OligoTarget(self.config, params)
+
+        # Test getting the candidate block sequence.
+        formatted_block_seq = str(
+                oligo_generator.get_candidate_block_seq(oligo_target)).upper()
+        UPSTREAM_OF_MUT = 'AACAACCAGCGCCACAGCGGATGCGTGGAGATTCGGCGGATGGCATCGCTACAGGCCAGCAATGCCAG'
+        DOWNSTREAM_OF_MUT = 'GCCGCAGCCAGCCAGAAACCACTGCCGAGGCTGGTACGCGCCAGCGCACTGCCATTTTGCGCCAGTTGG'
+        EXPECTED_BLOCK_SEQ = UPSTREAM_OF_MUT + REF + DOWNSTREAM_OF_MUT
+        self.assertEqual(len(EXPECTED_BLOCK_SEQ), len(formatted_block_seq))
+        self.assertEqual(EXPECTED_BLOCK_SEQ, formatted_block_seq)
+
+    def test_oligo_generator__determine_oligo_from_block(self):
+        """Tests that getting the oligo from block seq works.
+        """
+        OLIGO_SIZE = 90
+        self.config.oligo_size = OLIGO_SIZE
+
+        OLIGO_END_BUFFER_DISTANCE = 20
+        self.config.oligo_end_buffer_distance = OLIGO_END_BUFFER_DISTANCE
+
+        # Ensures full space is explored
+        self.config.min_ss_dG = 100
+
+        # Ignore phosphorothioates for now.
+        self.config.num_phosphorothioate_bonds = 0
+
+        oligo_generator = OligoGenerator(self.config)
+
+        # Use seq cenetered aroud position 2216229.
+        REF = 'C'
+        UPSTREAM_OF_MUT = 'AACAACCAGCGCCACAGCGGATGCGTGGAGATTCGGCGGATGGCATCGCTACAGGCCAGCAATGCCAG'
+        DOWNSTREAM_OF_MUT = 'GCCGCAGCCAGCCAGAAACCACTGCCGAGGCTGGTACGCGCCAGCGCACTGCCATTTTGCGCCAGTTGG'
+        BLOCK_SEQ = UPSTREAM_OF_MUT + REF + DOWNSTREAM_OF_MUT
+
+        best_oligo_candidate, midpoint_range_explored = (
+                oligo_generator.determine_oligo_from_block(BLOCK_SEQ))
+
+        # Assert that we explored the full space (100 min dG ensures this.)
+        # NOTE: We are aware we miss one, but okay with it for simplicity.
+        EXPECTED_MIDPOINT_RANGE = [45, len(BLOCK_SEQ) - 44]
+        self.assertEqual(EXPECTED_MIDPOINT_RANGE, midpoint_range_explored)
+
 
     def test_oligo_generator__from_reference__target_forward_strand(self):
         """Test for synthesizing an oligo that targets the forward strand,
@@ -95,13 +167,11 @@ class TestOptMAGE(unittest.TestCase):
         self.assertEqual(EXPECTED_BLOCK_SEQ, formatted_block_seq)
 
         # Test getting the actual oligo seq.
-        oligo_result = oligo_generator.generate_oligo(oligo_target)
         formatted_oligo_seq = str(
                 oligo_generator.generate_oligo(oligo_target).oligo_seq).upper()
         EXPECTED_OLIGO_SEQ = 'GACCCGGGAAATCCGCAACCAGCGCATCTCGGGTGCGAGTTAGACGGTTAAATAACGTGGATTTTCCTACGTTAGGGCGCCCGACAAGCG'
         self.assertEqual(OLIGO_SIZE, len(formatted_oligo_seq))
         self.assertEqual(EXPECTED_OLIGO_SEQ, formatted_oligo_seq)
-
 
     def test_oligo_generator__from_reference__target_reverse_strand(self):
         """Test for synthesizing an oligo that targets the reverse strand,
@@ -141,13 +211,11 @@ class TestOptMAGE(unittest.TestCase):
         self.assertEqual(EXPECTED_BLOCK_SEQ, formatted_block_seq)
 
         # Test getting the actual oligo seq.
-        oligo_result = oligo_generator.generate_oligo(oligo_target)
         formatted_oligo_seq = str(
                 oligo_generator.generate_oligo(oligo_target).oligo_seq).upper()
         EXPECTED_OLIGO_SEQ = 'TAGTCAATCGCATACTCTTGCGGGATCACATGCAGCACACGATGCTCATCGCGCACACGCACCGATTTCGCGGTATGGACGACGTTTTCC'
         self.assertEqual(OLIGO_SIZE, len(formatted_oligo_seq))
         self.assertEqual(EXPECTED_OLIGO_SEQ, formatted_oligo_seq)
-
 
     def test_determine_oligo_sense(self):
         """Tests for OligoGenerator.determine_oligo_sense().
@@ -198,7 +266,6 @@ class TestOptMAGE(unittest.TestCase):
                     'mutation_type': 'R'
                 })))
 
-
     def test_free_energy_optmization(self):
         """Tests that the oligo search optimizes the free energy and scans
         both left and right of the mutation midpoint.
@@ -247,7 +314,6 @@ class TestOptMAGE(unittest.TestCase):
         EXPECTED_SEQ = 'A*A*AAAAAAAAAAAAAAAAAA'
         self.assertEqual(EXPECTED_SEQ, str(oligo_result.oligo_seq).upper())
 
-
     def test_mutation__positive_strand(self):
         """Test making a mutation relative to the positive strand.
         """
@@ -290,7 +356,6 @@ class TestOptMAGE(unittest.TestCase):
         self.assertEqual(EXPECTED_OLIGO_SEQ,
                 str(oligo_result.oligo_seq).upper())
 
-
     def test_mutation__negative_strand(self):
         """Test making a mutation relative to the negative strand.
         """
@@ -332,7 +397,6 @@ class TestOptMAGE(unittest.TestCase):
         EXPECTED_OLIGO_SEQ = 'CGCTAACC'
         self.assertEqual(EXPECTED_OLIGO_SEQ,
                 str(oligo_result.oligo_seq).upper())
-
 
     def test_deletion(self):
         """Test making a deletion.

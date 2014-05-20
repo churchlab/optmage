@@ -323,7 +323,7 @@ class OligoGenerator(object):
 
         # Determine the oligo cut-off from the block and report its final
         # free energy.
-        oligo_seq_result = self.determine_oligo_from_block(block_seq)
+        oligo_seq_result, _ = self.determine_oligo_from_block(block_seq)
         oligo_seq = oligo_seq_result['oligo_seq']
         ss_dG = oligo_seq_result['ss_dG']
 
@@ -365,9 +365,9 @@ class OligoGenerator(object):
         oligo.
         """
         # The strategy for determining the candidate block is:
-        #     1) Determine upstream and downstream bounds of the block using
-        #        the [BioPython] convention of positions being relative to the
-        #        sense strand.
+        #     1) Determine upstream and downstream bounds of the block:
+        #           Use the [BioPython] convention of positions being relative
+        #           to the sense strand.
         #     2) Determine correct polarity:
         #           If the target lies on replichore 1 and (+) strand or on
         #           replichore 2 and on the (-) strand, then the sense strand
@@ -385,6 +385,7 @@ class OligoGenerator(object):
         # position possible, or ~15 base pairs upstream of the mutation region,
         # and end 90 base pairs down stream. We take into account any bases
         # added or deleted at the target:
+
         downstream_bound = (oligo_target.end + (
                 self.config.oligo_size -
                 self.config.oligo_end_buffer_distance -
@@ -449,11 +450,15 @@ class OligoGenerator(object):
         current_midpoint = initial_midpoint
         wiggle = 1
 
+        # Calculate this once.
+        downstream_half_oligo_size = int(
+                math.floor(self.config.oligo_size / 2.0))
+        upstream_half_oligo_size = int(
+                math.ceil(self.config.oligo_size / 2.0))
+
         # Make the initial cut and set the base for the best oligo.
-        upstream_block_cut = (current_midpoint -
-                int(math.floor(self.config.oligo_size / 2.0)))
-        downstream_block_cut = (current_midpoint +
-                int(math.ceil(self.config.oligo_size / 2.0)))
+        upstream_block_cut = (current_midpoint - downstream_half_oligo_size)
+        downstream_block_cut = (current_midpoint + upstream_half_oligo_size)
         oligo_seq = block_seq[upstream_block_cut:downstream_block_cut]
         assert self.config.oligo_size == len(oligo_seq), (
                 "Expected: %d, Actual: %d" %
@@ -463,20 +468,26 @@ class OligoGenerator(object):
                 'oligo_seq': oligo_seq,
                 'ss_dG': ss_dG
         }
+
+        # Keep track of the range explored for test/debug.
+        debug_midpoint_range_explored = [current_midpoint, current_midpoint]
+
         while ss_dG < self.config.min_ss_dG:
             current_midpoint = initial_midpoint + wiggle
+            upstream_block_cut = (current_midpoint - downstream_half_oligo_size)
+            downstream_block_cut = (current_midpoint + upstream_half_oligo_size)
 
-            upstream_block_cut = (current_midpoint -
-                    int(math.floor(self.config.oligo_size / 2.0)))
-            downstream_block_cut = (current_midpoint +
-                    int(math.ceil(self.config.oligo_size / 2.0)))
-            if (upstream_block_cut < self.config.oligo_end_buffer_distance or
-                    len(block_seq) - downstream_block_cut <
-                            self.config.oligo_end_buffer_distance):
-                # Hit the end.
-                # TODO: Make sure we check the actual last position. I think
-                # we are missing one more possibility when we are breaking as
-                # currently written.
+            # Update debug range explored.
+            if current_midpoint < debug_midpoint_range_explored[0]:
+                debug_midpoint_range_explored[0] = current_midpoint
+            elif current_midpoint > debug_midpoint_range_explored[1]:
+                debug_midpoint_range_explored[1] = current_midpoint
+
+            # Check if we've hit a boundary of the space to explore.
+            # TODO: Right now we're missing potentially checking the other
+            # boundary which is okay since we'll get a close-enough answer
+            # but can't hurt to fix.
+            if upstream_block_cut < 0 or downstream_block_cut > len(block_seq):
                 break
 
             # Make an oligo cut and calculate the free energy.
@@ -499,7 +510,7 @@ class OligoGenerator(object):
                 wiggle += 1
 
         # Return what we have at this point.
-        return best_oligo_candidate
+        return best_oligo_candidate, debug_midpoint_range_explored
 
 
     def get_ss_free_energy(self, seq):
