@@ -1,2 +1,6 @@
 target_id,strand,replichore,start,end,mutation_type,replacement_seq
+mut_2218811,+,,2218811,2218812,M,A
 mut_2216229,+,,2216229,2216230,M,T
+mut_322579,+,,322579,322580,M,T
+mut_2993246,+,,2993246,2993247,M,TA
+mut_2612632,+,,2612632,2612637,M,CC
