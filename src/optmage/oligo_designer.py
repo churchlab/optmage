@@ -166,8 +166,8 @@ class OligoTarget(object):
             params: Dictionary with keys:
                 * target_id
                 * strand
-                * start
-                * end
+                * start # 1-indexed
+                * end # 1-indexed (base after last base in seq)
                 * mutation_type
                 * replichore (optional)
                 * mutation_seq (optional)
@@ -181,10 +181,12 @@ class OligoTarget(object):
         self.strand = STRAND_INPUT_INTERPRETATION_MAP[params['strand']]
         assert self.strand == 1 or self.strand == -1
 
-        self.start = int(params['start'])
+        # pythonic
+        self.start = int(params['start'] - 1)
         assert self.start >= 0
 
-        self.end = int(params['end'])
+        # pythonic
+        self.end = int(params['end'] - 1)
         assert self.end <= len(optMAGE_config.genome_record)
         assert self.end >= self.start, "Bad input. End is less than start."
 

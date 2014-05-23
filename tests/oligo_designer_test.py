@@ -91,8 +91,8 @@ class TestOptMAGE(unittest.TestCase):
         # Test getting the candidate block sequence.
         formatted_block_seq = str(
                 oligo_generator.get_candidate_block_seq(oligo_target)).upper()
-        UPSTREAM_OF_MUT = 'AACAACCAGCGCCACAGCGGATGCGTGGAGATTCGGCGGATGGCATCGCTACAGGCCAGCAATGCCAG'
-        DOWNSTREAM_OF_MUT = 'GCCGCAGCCAGCCAGAAACCACTGCCGAGGCTGGTACGCGCCAGCGCACTGCCATTTTGCGCCAGTTGG'
+        UPSTREAM_OF_MUT = 'CAACAACCAGCGCCACAGCGGATGCGTGGAGATTCGGCGGATGGCATCGCTACAGGCCAGCAATGCCAG'
+        DOWNSTREAM_OF_MUT = 'GCCGCAGCCAGCCAGAAACCACTGCCGAGGCTGGTACGCGCCAGCGCACTGCCATTTTGCGCCAGTTG'
         EXPECTED_BLOCK_SEQ = UPSTREAM_OF_MUT + REF + DOWNSTREAM_OF_MUT
         self.assertEqual(len(EXPECTED_BLOCK_SEQ), len(formatted_block_seq))
         self.assertEqual(EXPECTED_BLOCK_SEQ, formatted_block_seq)
@@ -163,13 +163,13 @@ class TestOptMAGE(unittest.TestCase):
         # Test getting the candidate block sequence.
         formatted_block_seq = str(
                 oligo_generator.get_candidate_block_seq(oligo_target)).upper()
-        EXPECTED_BLOCK_SEQ = 'GACCGTACTTACGGTCACGAGTCAGACCCGGGAAATCCGCAACCAGCGCATCTCGGGTGCGAGTTAGACGGTTAAATAACGTGGATTTTCCTACGTTAGGGCGCCCGACAAGCGCGACCACAGGTACCATGTTTAAAG'
+        EXPECTED_BLOCK_SEQ = 'CGACCGTACTTACGGTCACGAGTCAGACCCGGGAAATCCGCAACCAGCGCATCTCGGGTGCGAGTTAGACGGTTAAATAACGTGGATTTTCCTACGTTAGGGCGCCCGACAAGCGCGACCACAGGTACCATGTTTAAA'
         self.assertEqual(EXPECTED_BLOCK_SEQ, formatted_block_seq)
 
         # Test getting the actual oligo seq.
         formatted_oligo_seq = str(
                 oligo_generator.generate_oligo(oligo_target).oligo_seq).upper()
-        EXPECTED_OLIGO_SEQ = 'GACCCGGGAAATCCGCAACCAGCGCATCTCGGGTGCGAGTTAGACGGTTAAATAACGTGGATTTTCCTACGTTAGGGCGCCCGACAAGCG'
+        EXPECTED_OLIGO_SEQ = 'AGACCCGGGAAATCCGCAACCAGCGCATCTCGGGTGCGAGTTAGACGGTTAAATAACGTGGATTTTCCTACGTTAGGGCGCCCGACAAGC'
         self.assertEqual(OLIGO_SIZE, len(formatted_oligo_seq))
         self.assertEqual(EXPECTED_OLIGO_SEQ, formatted_oligo_seq)
 
@@ -207,13 +207,13 @@ class TestOptMAGE(unittest.TestCase):
         # Test getting the candidate block sequence.
         formatted_block_seq = str(
                 oligo_generator.get_candidate_block_seq(oligo_target)).upper()
-        EXPECTED_BLOCK_SEQ = 'ACCGGATTCTTGATCCCTTCCTGATAGTCAATCGCATACTCTTGCGGGATCACATGCAGCACACGATGCTCATCGCGCACACGCACCGATTTCGCGGTATGGACGACGTTTTCCACATCTTCTTGCGTCACTTCTTCT'
+        EXPECTED_BLOCK_SEQ = 'CCGGATTCTTGATCCCTTCCTGATAGTCAATCGCATACTCTTGCGGGATCACATGCAGCACACGATGCTCATCGCGCACACGCACCGATTTCGCGGTATGGACGACGTTTTCCACATCTTCTTGCGTCACTTCTTCTT'
         self.assertEqual(EXPECTED_BLOCK_SEQ, formatted_block_seq)
 
         # Test getting the actual oligo seq.
         formatted_oligo_seq = str(
                 oligo_generator.generate_oligo(oligo_target).oligo_seq).upper()
-        EXPECTED_OLIGO_SEQ = 'TAGTCAATCGCATACTCTTGCGGGATCACATGCAGCACACGATGCTCATCGCGCACACGCACCGATTTCGCGGTATGGACGACGTTTTCC'
+        EXPECTED_OLIGO_SEQ = 'AGTCAATCGCATACTCTTGCGGGATCACATGCAGCACACGATGCTCATCGCGCACACGCACCGATTTCGCGGTATGGACGACGTTTTCCA'
         self.assertEqual(OLIGO_SIZE, len(formatted_oligo_seq))
         self.assertEqual(EXPECTED_OLIGO_SEQ, formatted_oligo_seq)
 
@@ -336,13 +336,15 @@ class TestOptMAGE(unittest.TestCase):
                 'target_id': '1',
                 'replichore': 2, # so we get an oligo in the positive sense.
                 'strand': 1,
-                'start': 3,
-                'end': 6,
+                'start': 4,
+                'end': 7,
                 'mutation_type': 'M',
                 'mutation_seq': 'TAA'
         })
         oligo_result = OLIGO_GENERATOR.generate_oligo(OLIGO_TARGET)
         self.assertEqual(OLIGO_SIZE, len(oligo_result.oligo_seq))
+        self.assertEqual('TAG', str(oligo_result.original_seq))
+        self.assertEqual('TAA', str(oligo_result.mutation_seq))
         EXPECTED_OLIGO_SEQ = 'GCTAACC'
         self.assertEqual(EXPECTED_OLIGO_SEQ,
                 str(oligo_result.oligo_seq).upper())
@@ -378,8 +380,8 @@ class TestOptMAGE(unittest.TestCase):
                 'target_id': '1',
                 'replichore': 2, # so we get an oligo in the positive sense.
                 'strand': -1,
-                'start': 3,
-                'end': 6,
+                'start': 4,
+                'end': 7,
                 'mutation_type': 'M',
                 'mutation_seq': 'TTA'
         })
@@ -411,6 +413,7 @@ class TestOptMAGE(unittest.TestCase):
 
         OLIGO_GENERATOR = OligoGenerator(self.config)
 
+        #                  TCGC AGC
         RAW_SEQ_1 = 'TTTTTTTCGCTAGCCCTTTTTTTTTTTTTTTT'
         SEQ_OBJ_1 = Seq(RAW_SEQ_1, generic_dna)
         GENOME_RECORD_1 = SeqRecord(SEQ_OBJ_1)
@@ -420,8 +423,8 @@ class TestOptMAGE(unittest.TestCase):
                 'target_id': '1',
                 'replichore': 2, # so we get an oligo in the positive sense.
                 'strand': 1,
-                'start': 10,
-                'end': 11,
+                'start': 11,
+                'end': 12,
                 'mutation_type': 'D',
         })
         oligo_result = OLIGO_GENERATOR.generate_oligo(OLIGO_TARGET)
@@ -429,7 +432,8 @@ class TestOptMAGE(unittest.TestCase):
         EXPECTED_OLIGO_SEQ = 'TCGCAGC'
         EXPECTED_OLIGO_SEQ_ALTERNATE = 'CGCAGCC'
         self.assertTrue(str(oligo_result.oligo_seq).upper() in
-                [EXPECTED_OLIGO_SEQ, EXPECTED_OLIGO_SEQ_ALTERNATE])
+                [EXPECTED_OLIGO_SEQ, EXPECTED_OLIGO_SEQ_ALTERNATE],
+                'Got: ' + str(oligo_result.oligo_seq).upper())
 
         # Try similar with oligo size 8.
         OLIGO_SIZE = 8
@@ -448,8 +452,8 @@ class TestOptMAGE(unittest.TestCase):
                 'target_id': '1',
                 'replichore': 2, # so we get an oligo in the positive sense.
                 'strand': 1,
-                'start': 10,
-                'end': 13,
+                'start': 11,
+                'end': 14,
                 'mutation_type': 'D',
         })
         oligo_result = OLIGO_GENERATOR.generate_oligo(OLIGO_TARGET)
@@ -468,6 +472,24 @@ class TestOptMAGE(unittest.TestCase):
         EXPECTED_OLIGO_SEQ_ALTERNATE = 'TCGCCCCT'
         self.assertTrue(str(oligo_result.oligo_seq).upper() in
                 [EXPECTED_OLIGO_SEQ, EXPECTED_OLIGO_SEQ_ALTERNATE])
+
+
+    def test_mutation__full_genome__positive_strand(self):
+        self.config.num_phosphorothioate_bonds = 0
+        OLIGO_GENERATOR = OligoGenerator(self.config)
+        OLIGO_TARGET = OligoTarget(self.config, {
+                'target_id': '1',
+                'replichore': 2, # so we get an oligo in the positive sense.
+                'strand': 1,
+                'start': 2216229,
+                'end': 2216230,
+                'mutation_type': 'M',
+                'mutation_seq': 'T'
+        })
+        oligo_result = OLIGO_GENERATOR.generate_oligo(OLIGO_TARGET)
+        self.assertEqual(DEFAULT_OLIGO_SIZE, len(oligo_result.oligo_seq))
+        self.assertEqual('C', str(oligo_result.original_seq).upper())
+        self.assertEqual('T', str(oligo_result.mutation_seq).upper())
 
 
 if __name__ == '__main__':
