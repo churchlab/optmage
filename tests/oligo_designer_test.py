@@ -473,7 +473,6 @@ class TestOptMAGE(unittest.TestCase):
         self.assertTrue(str(oligo_result.oligo_seq).upper() in
                 [EXPECTED_OLIGO_SEQ, EXPECTED_OLIGO_SEQ_ALTERNATE])
 
-
     def test_mutation__full_genome__positive_strand(self):
         self.config.num_phosphorothioate_bonds = 0
         OLIGO_GENERATOR = OligoGenerator(self.config)
@@ -490,6 +489,23 @@ class TestOptMAGE(unittest.TestCase):
         self.assertEqual(DEFAULT_OLIGO_SIZE, len(oligo_result.oligo_seq))
         self.assertEqual('C', str(oligo_result.original_seq).upper())
         self.assertEqual('T', str(oligo_result.mutation_seq).upper())
+
+    def test_input_accepts_strings_or_numbers(self):
+        """Input might be parsed from file so should handle numbers as
+        strings.
+        """
+        self.config.num_phosphorothioate_bonds = 0
+        OLIGO_GENERATOR = OligoGenerator(self.config)
+        OLIGO_TARGET = OligoTarget(self.config, {
+                'target_id': '1',
+                'replichore': 2, # so we get an oligo in the positive sense.
+                'strand': 1,
+                'start': '2216229', # Testing this.
+                'end': 2216230,
+                'mutation_type': 'M',
+                'mutation_seq': 'T'
+        })
+        OLIGO_GENERATOR.generate_oligo(OLIGO_TARGET)
 
 
 if __name__ == '__main__':

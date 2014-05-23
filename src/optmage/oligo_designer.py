@@ -182,11 +182,11 @@ class OligoTarget(object):
         assert self.strand == 1 or self.strand == -1
 
         # pythonic
-        self.start = int(params['start'] - 1)
+        self.start = int(params['start']) - 1
         assert self.start >= 0
 
         # pythonic
-        self.end = int(params['end'] - 1)
+        self.end = int(params['end']) - 1
         assert self.end <= len(optMAGE_config.genome_record)
         assert self.end >= self.start, "Bad input. End is less than start."
 
