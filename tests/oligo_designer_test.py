@@ -489,6 +489,8 @@ class TestOptMAGE(unittest.TestCase):
         self.assertEqual(DEFAULT_OLIGO_SIZE, len(oligo_result.oligo_seq))
         self.assertEqual('C', str(oligo_result.original_seq).upper())
         self.assertEqual('T', str(oligo_result.mutation_seq).upper())
+        self.assertEqual(2216229, oligo_result.start)
+        self.assertEqual(2216230, oligo_result.end)
 
     def test_input_accepts_strings_or_numbers(self):
         """Input might be parsed from file so should handle numbers as

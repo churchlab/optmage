@@ -340,8 +340,8 @@ class OligoGenerator(object):
 
         return OligoResult(
             oligo_target.target_id,
-            oligo_target.start,
-            oligo_target.end,
+            oligo_target.start + 1,
+            oligo_target.end + 1,
             oligo_target.strand,
             oligo_target.replichore,
             oligo_target.mutation_type,
