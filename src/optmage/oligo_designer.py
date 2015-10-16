@@ -577,7 +577,9 @@ class OligoWriter(object):
             'oligo_seq',
             'original_seq',
             'mutation_seq',
-            'predicted_replacement_efficiency'
+
+            # TODO: Uncomment if we ever implement this.
+            # 'predicted_replacement_efficiency'
     ]
 
     @classmethod
