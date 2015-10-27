@@ -302,7 +302,7 @@ class OligoResult(object):
         self.oligo_seq = oligo_seq
         self.original_seq = original_seq
         self.mutation_seq = mutation_seq
-        self.predicted_replacement_efficiency = predicted_replacement_efficiency
+        # self.predicted_replacement_efficiency = predicted_replacement_efficiency
 
 
 class OligoGenerator(object):
