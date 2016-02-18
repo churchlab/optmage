@@ -45,6 +45,9 @@ DEFAULT_NUM_PHOSPHOROTHIOATE = 2
 DEFAULT_REPLICATION_ORIGIN = (3923767, 3923998)
 DEFAULT_REPLICATION_TERMINUS = (1588774, 1588801)
 
+# Use system-wide hybrid-ss-min.
+DEFAULT_SS_CALCULATOR_BIN = 'hybrid-ss-min'
+
 # NOTE: These were the coordinates used in the old script,
 # but they appear to be wrong.
 # DEFAULT_REPLICATION_ORIGIN = (3932974, 3933205)
@@ -100,7 +103,8 @@ class OptMAGEConfig(object):
             auto_calc_replichore=True,
             ref_genome_source_location=DEFAULT_GENOME,
             replication_origin=DEFAULT_REPLICATION_ORIGIN,
-            replication_terminus=DEFAULT_REPLICATION_TERMINUS):
+            replication_terminus=DEFAULT_REPLICATION_TERMINUS,
+            ss_calculator_bin=DEFAULT_SS_CALCULATOR_BIN):
         """Constructor."""
         # The size of the oligo. This is typically 90.
         self.oligo_size = oligo_size
@@ -518,8 +522,9 @@ class OligoGenerator(object):
     def get_ss_free_energy(self, seq):
         """Returns the free energy for the given sequence as a float.
         """
-        HYBRID_SS_MIN_CMD_ROOT = 'hybrid-ss-min --NA=DNA --energyOnly -q '
-        full_cmd = HYBRID_SS_MIN_CMD_ROOT + str(seq)
+        hybrid_ss_min_cmd_root = (
+                self.config.ss_calculator_bin + ' --NA=DNA --energyOnly -q ')
+        full_cmd = hybrid_ss_min_cmd_root + str(seq)
         p = subprocess.Popen(full_cmd.split(), stdout=subprocess.PIPE)
         return float(p.stdout.read().strip())
 
