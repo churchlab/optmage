@@ -34,6 +34,7 @@ DATA = os.path.join(PWD, 'data')
 DEFAULT_GENOME = os.path.join(DATA, 'mg1655.fasta')
 DEFAULT_OLIGO_TARGET_FILENAME = os.path.join(DATA, 'input_targets.csv')
 DEFAULT_OLIGO_RESULT_OUTPUT_FILENAME = os.path.join(DATA, 'out_oligos.csv')
+DEFAULT_GENOME_TYPE = 'fasta'
 
 # Other defaults/constants.
 DEFAULT_OLIGO_SIZE = 90
@@ -99,8 +100,10 @@ class OptMAGEConfig(object):
             num_phosphorothioate_bonds=DEFAULT_NUM_PHOSPHOROTHIOATE,
             auto_calc_replichore=True,
             ref_genome_source_location=DEFAULT_GENOME,
+            ref_genome_source_type=DEFAULT_GENOME_TYPE,
             replication_origin=DEFAULT_REPLICATION_ORIGIN,
-            replication_terminus=DEFAULT_REPLICATION_TERMINUS):
+            replication_terminus=DEFAULT_REPLICATION_TERMINUS,
+            constrain_fiveprime=None):
         """Constructor."""
         # The size of the oligo. This is typically 90.
         self.oligo_size = oligo_size
@@ -125,11 +128,16 @@ class OptMAGEConfig(object):
         self.should_calc_replichore = auto_calc_replichore
 
         # The genome.
-        self.set_genome_record_from_source(ref_genome_source_location)
+        self.set_genome_record_from_source(
+                ref_genome_source_location, ref_genome_source_type)
 
         # Replichore-related.
         self.replication_origin = replication_origin
         self.replication_terminus = replication_terminus
+
+        # Enforce that the oligo must start with a certain base. None
+        # if no constraint.
+        self.constrain_fiveprime = constrain_fiveprime
 
     @classmethod
     def build_from_args(cls, args):
@@ -145,11 +153,11 @@ class OptMAGEConfig(object):
             replication_origin=args.replication_origin,
             replication_terminus=args.replication_terminus)
 
-    def set_genome_record_from_source(self, genome_source):
+    def set_genome_record_from_source(self, genome_source, ftype='fasta'):
         """Sets the genome record from source file path.
         """
         with open(genome_source) as genome_fh:
-            self.genome_record = SeqIO.read(genome_fh, 'fasta')
+            self.genome_record = SeqIO.read(genome_fh, ftype)
 
 
 class OligoTarget(object):
@@ -213,8 +221,12 @@ class OligoTarget(object):
         # Basic validation.
         assert len(self.mutation_seq) / 2 <= \
                 optMAGE_config.oligo_size / 2 - \
-                        optMAGE_config.oligo_end_buffer_distance, \
-                "Mutation is too large."
+                        optMAGE_config.oligo_end_buffer_distance, (\
+                "Mutation is too large.\n" +
+                "Oligo: {}, Mutation: {}, Buffer: {}".format(
+                        optMAGE_config.oligo_size,
+                        len(self.mutation_seq),
+                        optMAGE_config.oligo_end_buffer_distance))
 
         # Set replichore. Must be either 1 or 2.
         if optMAGE_config.should_calc_replichore:
@@ -289,7 +301,8 @@ class OligoResult(object):
 
     def __init__(self, target_id, start, end, strand, replichore,
             mutation_type, ss_dG, oligo_size, oligo_seq, original_seq,
-            mutation_seq, predicted_replacement_efficiency):
+            mutation_seq, us_homology, ds_homology,
+            predicted_replacement_efficiency):
         """Constructor."""
         self.target_id = target_id
         self.start = start
@@ -302,6 +315,11 @@ class OligoResult(object):
         self.oligo_seq = oligo_seq
         self.original_seq = original_seq
         self.mutation_seq = mutation_seq
+
+        # lengths of upstream and downstream homology
+        self.us_homology = us_homology
+        self.ds_homology = ds_homology
+
         # self.predicted_replacement_efficiency = predicted_replacement_efficiency
 
 
@@ -325,9 +343,14 @@ class OligoGenerator(object):
 
         # Determine the oligo cut-off from the block and report its final
         # free energy.
-        oligo_seq_result, _ = self.determine_oligo_from_block(block_seq)
+        oligo_seq_result, _ = self.determine_oligo_from_block(
+                    block_seq,
+                    oligo_target)
+
         oligo_seq = oligo_seq_result['oligo_seq']
         ss_dG = oligo_seq_result['ss_dG']
+        us_homology = oligo_seq_result['us_homology']
+        ds_homology = oligo_seq_result['ds_homology']
 
         # If specified, add the phosphorothioate bonds to the oligo.
         if self.config.num_phosphorothioate_bonds > 0:
@@ -346,10 +369,12 @@ class OligoGenerator(object):
             oligo_target.replichore,
             oligo_target.mutation_type,
             ss_dG,
-            self.config.oligo_size,
+            oligo_target.config.oligo_size,
             oligo_seq,
             oligo_target.original_seq,
             oligo_target.mutation_seq,
+            us_homology,
+            ds_homology,
             predicted_replacement_efficiency
         )
 
@@ -388,19 +413,21 @@ class OligoGenerator(object):
         # and end 90 base pairs down stream. We take into account any bases
         # added or deleted at the target:
 
-        downstream_bound = (oligo_target.end + (
+        downstream_bound = int(oligo_target.end + (
                 self.config.oligo_size -
                 self.config.oligo_end_buffer_distance -
-                len(oligo_target.mutation_seq) -
+                math.ceil(len(oligo_target.mutation_seq) / 2.0) -
                 1))
+
         downstream_bound = min(downstream_bound,
                 len(self.config.genome_record.seq))
 
         # The upstream bound follows a similar argument.
-        upstream_bound = (oligo_target.start - (
+        upstream_bound = int(oligo_target.start - (
                 self.config.oligo_size -
                         self.config.oligo_end_buffer_distance -
-                        len(oligo_target.mutation_seq)))
+                        math.floor(len(oligo_target.mutation_seq) / 2.0)))
+
         upstream_bound = max(0, upstream_bound)
 
         # Prepare the mutation sequence to have the correct polarity relative
@@ -420,11 +447,20 @@ class OligoGenerator(object):
                 self.config.genome_record.seq[oligo_target.end:downstream_bound]
         )
 
+        assert len(block_seq) >= oligo_target.config.oligo_size, \
+                ('Block length insufficient to build oligo.'+
+                '\n----\not:{}\nlen:{}\ncfg:{}\nus/ds:{},{}').format(
+                        oligo_target.__dict__,
+                        len(oligo_target.mutation_seq),
+                        oligo_target.config.__dict__,
+                        upstream_bound,
+                        downstream_bound)
 
         ### 2) Determine the polarity of the oligo return the appropriate
         ###    block sequence.
 
         oligo_sense = self.determine_oligo_sense(oligo_target)
+
         if oligo_sense == 1:
             return block_seq
         else:
@@ -443,7 +479,10 @@ class OligoGenerator(object):
         return -1 if oligo_target.replichore == 1 else 1
 
 
-    def determine_oligo_from_block(self, block_seq):
+    def determine_oligo_from_block(
+            self,
+            block_seq,
+            oligo_target):
         """Starts centered on the candidate block and wiggles outwards
         until a window is found that satisfies the secondary structure free
         energy constraint.
@@ -451,6 +490,10 @@ class OligoGenerator(object):
         initial_midpoint = len(block_seq) / 2
         current_midpoint = initial_midpoint
         wiggle = 1
+        mut_len = len(oligo_target.mutation_seq)
+        mut_pos = (
+                initial_midpoint - math.floor(mut_len/2),
+                initial_midpoint + math.ceil(mut_len/2))
 
         # Calculate this once.
         downstream_half_oligo_size = int(
@@ -462,13 +505,24 @@ class OligoGenerator(object):
         upstream_block_cut = (current_midpoint - downstream_half_oligo_size)
         downstream_block_cut = (current_midpoint + upstream_half_oligo_size)
         oligo_seq = block_seq[upstream_block_cut:downstream_block_cut]
+
         assert self.config.oligo_size == len(oligo_seq), (
                 "Expected: %d, Actual: %d" %
                         (self.config.oligo_size, len(oligo_seq)))
-        ss_dG = self.get_ss_free_energy(oligo_seq)
+
+        # if we are constraining the first base, then set ss_dG to -inf
+        # if it is the wrong base
+        if (self.config.constrain_fiveprime and
+                oligo_seq[0] != self.config.constrain_fiveprime):
+            ss_dG = -float('Inf')
+        else:
+            ss_dG = self.get_ss_free_energy(oligo_seq)
+
         best_oligo_candidate = {
                 'oligo_seq': oligo_seq,
-                'ss_dG': ss_dG
+                'ss_dG': ss_dG,
+                'us_homology': mut_pos[0] - upstream_block_cut,
+                'ds_homology': downstream_block_cut - mut_pos[1]
         }
 
         # Keep track of the range explored for test/debug.
@@ -494,14 +548,23 @@ class OligoGenerator(object):
 
             # Make an oligo cut and calculate the free energy.
             oligo_seq = block_seq[upstream_block_cut:downstream_block_cut]
+
             assert self.config.oligo_size == len(oligo_seq), (
                     "Expected: %d, Actual: %d" %
                             (self.config.oligo_size, len(oligo_seq)))
-            ss_dG = self.get_ss_free_energy(oligo_seq)
+
+            if self.config.constrain_fiveprime:
+                if oligo_seq[0] != self.config.constrain_fiveprime:
+                    ss_dG = -float('Inf')
+                else:
+                    ss_dG = self.get_ss_free_energy(oligo_seq)
+
             if ss_dG > best_oligo_candidate['ss_dG']:
                 best_oligo_candidate = {
                     'oligo_seq': oligo_seq,
-                    'ss_dG': ss_dG
+                    'ss_dG': ss_dG,
+                    'us_homology': mut_pos[0] - upstream_block_cut,
+                    'ds_homology': downstream_block_cut - mut_pos[1]
                 }
 
             # Update the wiggle for the next iteration.
@@ -577,6 +640,8 @@ class OligoWriter(object):
             'oligo_seq',
             'original_seq',
             'mutation_seq',
+            'us_homology',
+            'ds_homology'
 
             # TODO: Uncomment if we ever implement this.
             # 'predicted_replacement_efficiency'
