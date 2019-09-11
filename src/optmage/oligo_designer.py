@@ -487,7 +487,7 @@ class OligoGenerator(object):
         until a window is found that satisfies the secondary structure free
         energy constraint.
         """
-        initial_midpoint = len(block_seq) / 2
+        initial_midpoint = int(len(block_seq) / 2)
         current_midpoint = initial_midpoint
         wiggle = 1
         mut_len = len(oligo_target.mutation_seq)
